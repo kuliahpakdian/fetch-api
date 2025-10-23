@@ -101,7 +101,7 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('API Fetcher Flutter (ListView)'),
+        title: const Text('My Todo List' ,style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.indigo,
         elevation: 4,
       ),
