@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import '../services/to_do_service.dart';
 import '../model/to_do_item.dart';
+import '../widget/to_do_list_item_widget.dart';
 
 class ActivityFetcher extends StatefulWidget {
   const ActivityFetcher({super.key});
-
   @override
   State<ActivityFetcher> createState() => _ActivityFetcherState();
 }
 
 class _ActivityFetcherState extends State<ActivityFetcher> {
   final ToDoService _toDoService = ToDoService();
-
   List<ToDoItem> _toDoItems = []; 
   bool isLoading = false;
   String? error; 
 
   String _initialMessage = "Tekan tombol untuk memuat daftar To-Do dari API. (Simulasi 10 item)";
-
-
 
   Future<void> fetchActivity() async {
     setState(() {
@@ -33,7 +30,6 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
       setState(() {
         _toDoItems = fetchedList;
       });
-
     } catch (e) {
       debugPrint('Kesalahan dalam fetching di UI: $e');
       setState(() {
@@ -45,34 +41,6 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
         isLoading = false;
       });
     }
-  }
-
-  Widget _buildToDoListItem(ToDoItem item) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: item.completed ? Colors.green.shade600 : Colors.orange.shade600,
-          child: Text(
-            item.id.toString(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        title: Text(
-          item.title,
-          style: TextStyle(
-            decoration: item.completed ? TextDecoration.lineThrough : TextDecoration.none,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        trailing: Icon(
-          item.completed ? Icons.check_circle : Icons.pending,
-          color: item.completed ? Colors.green : Colors.orange,
-        ),
-      ),
-    );
   }
 
   Widget _buildContent() {
@@ -109,7 +77,7 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
         padding: const EdgeInsets.all(12.0),
         itemCount: _toDoItems.length,
         itemBuilder: (context, index) {
-          return _buildToDoListItem(_toDoItems[index]);
+          return ToDoListItemWidget(item: _toDoItems[index]);
         },
       );
     } else {
