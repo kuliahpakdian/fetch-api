@@ -13,6 +13,7 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
   final ToDoService _toDoService = ToDoService();
   List<ToDoItem> _toDoItems = []; 
   bool isLoading = false;
+  bool isCreating = false; // State untuk proses POST
   String? error; 
 
   String _initialMessage = "Tekan tombol untuk memuat daftar To-Do dari API. (Simulasi 10 item)";
@@ -41,6 +42,128 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
         isLoading = false;
       });
     }
+  }
+
+  // Method untuk submit POST ---
+  Future<void> _submitNewToDo(String title) async {
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Judul tidak boleh kosong!'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    setState(() {
+      isCreating = true;
+      error = null; // Hapus error lama jika ada
+    });
+
+    try {
+      final newItem = await _toDoService.createToDoItem(
+        title: title, 
+        userId: 1, 
+        completed: false
+      );
+
+      setState(() {
+        _toDoItems.insert(0, newItem);
+        _initialMessage = "Tekan tombol untuk memuat daftar To-Do dari API.";
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sukses! To-Do "${newItem.title}" ditambahkan.'),
+          backgroundColor: Colors.green.shade700,
+        ),
+      );
+
+    } catch (e) {
+      debugPrint('Kesalahan dalam POST di UI: $e');
+      setState(() {
+        error = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      setState(() {
+        isCreating = false;
+      });
+    }
+  }
+
+  // Method untuk menampilkan Dialog
+  Future<void> _showCreateDialog() async {
+    final TextEditingController titleController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      // Jangan tutup dialog saat sedang loading (isCreating)
+      barrierDismissible: !isCreating, 
+      builder: (BuildContext context) {
+        // Gunakan StatefulBuilder agar kita bisa update state (loading) di DALAM dialog
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Buat To-Do Baru'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    if (isCreating)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text("Menyimpan..."),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      TextField(
+                        controller: titleController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Contoh: Belajar Flutter POST',
+                          border: OutlineInputBorder(),
+                        ),
+                        // Izinkan submit via tombol 'enter' di keyboard
+                        onSubmitted: (value) {
+                           if (!isCreating) {
+                              Navigator.of(context).pop(); // Tutup dialog
+                              _submitNewToDo(titleController.text.trim());
+                           }
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Batal'),
+                  // Nonaktifkan tombol jika sedang loading
+                  onPressed: isCreating ? null : () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white
+                  ),
+                  // Nonaktifkan tombol jika sedang loading
+                  onPressed: isCreating ? null : () {
+                    Navigator.of(context).pop(); // Tutup dialog
+                    _submitNewToDo(titleController.text.trim());
+                  },
+                  child: Text(isCreating ? 'Menyimpan...' : 'Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildContent() {
@@ -104,16 +227,28 @@ class _ActivityFetcherState extends State<ActivityFetcher> {
         title: const Text('My Todo List' ,style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.indigo,
         elevation: 4,
+        // Tombol Aksi (Add) 
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_task, color: Colors.white),
+            tooltip: 'Buat To-Do Baru',
+            // Nonaktifkan tombol saat fetching ATAU creating
+            onPressed: (isLoading || isCreating) ? null : _showCreateDialog,
+          ),
+        ],
       ),
       body: _buildContent(), 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: isLoading ? null : fetchActivity,
+        // Nonaktifkan jika isLoading ATAU isCreating
+        onPressed: (isLoading || isCreating) ? null : fetchActivity,
         icon: const Icon(Icons.download),
         label: Text(
-          isLoading ? 'Sedang Memuat...' : 'Muat Daftar To-Do',
+          // Tampilkan status loading yang sesuai
+          isLoading ? 'Sedang Memuat...' : (isCreating ? 'Memproses...' : 'Muat Daftar To-Do'),
           style: const TextStyle(fontSize: 16),
         ),
-        backgroundColor: Colors.indigo,
+        // Ubah warna saat disabled
+        backgroundColor: (isLoading || isCreating) ? Colors.grey.shade600 : Colors.indigo,
         foregroundColor: Colors.white,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

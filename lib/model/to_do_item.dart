@@ -19,4 +19,13 @@ class ToDoItem {
       completed: json['completed'] as bool,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'title': title,
+      'completed': completed,
+    };
+  }
+  
 }
